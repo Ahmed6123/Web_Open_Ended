@@ -1,7 +1,11 @@
 import React from 'react';
-import { Container, CssBaseline, Typography, Box, createTheme, ThemeProvider } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Container, CssBaseline, Box, createTheme, ThemeProvider } from '@mui/material';
 import FeedbackForm from '../Components/FeedbackForm';
-import FeedbackList from '../Components/FeedbackList'
+import FeedbackList from '../Components/FeedbackList';
+import Login from '../Components/Login';
+import Navigation from '../Components/Navigation';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Create a theme
 const theme = createTheme({
@@ -15,19 +19,51 @@ const theme = createTheme({
   },
 });
 
+// Protected route component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) return <div>Loading...</div>;
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
+};
+
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+  
+  return (
+    <Router>
+      <Navigation />
+      <Container maxWidth="lg">
+        <Box sx={{ my: 4 }}>
+          <Routes>
+            <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Box>
+                  <FeedbackForm />
+                  <FeedbackList />
+                </Box>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </Box>
+      </Container>
+    </Router>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-            Student Feedback System
-          </Typography>
-          <FeedbackForm />
-          <FeedbackList />
-        </Box>
-      </Container>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

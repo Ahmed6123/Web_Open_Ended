@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { 
   Box, 
   TextField, 
@@ -9,41 +10,30 @@ import {
   MenuItem, 
   Typography,
   Snackbar,
-  Alert
+  Alert,
+  FormHelperText
 } from '@mui/material';
 import axios from 'axios';
 
 const FeedbackForm = () => {
-  const [feedback, setFeedback] = useState({
-    studentName: '',
-    subject: '',
-    rating: '',
-    comments: ''
-  });
   const [alert, setAlert] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
-  const [errors, setErrors] = useState({});
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!feedback.studentName.trim()) newErrors.studentName = 'Student name is required';
-    if (!feedback.subject.trim()) newErrors.subject = 'Subject is required';
-    if (!feedback.rating) newErrors.rating = 'Rating is required';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const { control, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      studentName: '',
+      subject: '',
+      rating: '',
+      comments: ''
+    }
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
+  const onSubmit = async (data) => {    
     try {
-      const response = await axios.post('http://localhost:5000/api/feedback', feedback);
+      const response = await axios.post('http://localhost:5000/api/feedback', data);
       
       if (response.data.success) {
         setAlert({
@@ -53,12 +43,7 @@ const FeedbackForm = () => {
         });
         
         // Reset form
-        setFeedback({
-          studentName: '',
-          subject: '',
-          rating: '',
-          comments: ''
-        });
+        reset();
       }
     } catch (error) {
       setAlert({
@@ -69,83 +54,91 @@ const FeedbackForm = () => {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFeedback({ ...feedback, [name]: value });
-    
-    // Clear error when field is edited
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
-    }
-  };
-
   const handleCloseAlert = () => {
     setAlert({ ...alert, open: false });
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 500, mx: 'auto', p: 3, boxShadow: 3, borderRadius: 2, bgcolor: 'background.paper' }}>
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ maxWidth: 500, mx: 'auto', p: 3, boxShadow: 3, borderRadius: 2, bgcolor: 'background.paper' }}>
       <Typography variant="h5" gutterBottom align="center" sx={{ mb: 3 }}>
         Submit Feedback
       </Typography>
       
-      <TextField
-        fullWidth
-        label="Student Name"
+      <Controller
         name="studentName"
-        value={feedback.studentName}
-        onChange={handleChange}
-        margin="normal"
-        error={!!errors.studentName}
-        helperText={errors.studentName}
-        required
-      />
-
-      <TextField
-        fullWidth
-        label="Subject"
-        name="subject"
-        value={feedback.subject}
-        onChange={handleChange}
-        margin="normal"
-        error={!!errors.subject}
-        helperText={errors.subject}
-        required
-      />
-
-      <FormControl 
-        fullWidth 
-        margin="normal" 
-        error={!!errors.rating}
-        required
-      >
-        <InputLabel>Rating</InputLabel>
-        <Select
-          value={feedback.rating}
-          label="Rating"
-          name="rating"
-          onChange={handleChange}
-        >
-          {[1, 2, 3, 4, 5].map(num => (
-            <MenuItem key={num} value={num}>{num}</MenuItem>
-          ))}
-        </Select>
-        {errors.rating && (
-          <Typography variant="caption" color="error">
-            {errors.rating}
-          </Typography>
+        control={control}
+        rules={{ 
+          required: 'Student name is required',
+          minLength: { value: 2, message: 'Name must be at least 2 characters' }
+        }}
+        render={({ field }) => (
+          <TextField
+            {...field}
+            fullWidth
+            label="Student Name"
+            margin="normal"
+            error={!!errors.studentName}
+            helperText={errors.studentName?.message}
+            required
+          />
         )}
-      </FormControl>
+      />
 
-      <TextField
-        fullWidth
-        label="Comments"
+      <Controller
+        name="subject"
+        control={control}
+        rules={{ required: 'Subject is required' }}
+        render={({ field }) => (
+          <TextField
+            {...field}
+            fullWidth
+            label="Subject"
+            margin="normal"
+            error={!!errors.subject}
+            helperText={errors.subject?.message}
+            required
+          />
+        )}
+      />
+
+      <Controller
+        name="rating"
+        control={control}
+        rules={{ required: 'Rating is required' }}
+        render={({ field }) => (
+          <FormControl 
+            fullWidth 
+            margin="normal" 
+            error={!!errors.rating}
+            required
+          >
+            <InputLabel>Rating</InputLabel>
+            <Select
+              {...field}
+              label="Rating"
+            >
+              {[1, 2, 3, 4, 5].map(num => (
+                <MenuItem key={num} value={num}>{num}</MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>{errors.rating?.message}</FormHelperText>
+          </FormControl>
+        )}
+      />
+
+      <Controller
         name="comments"
-        value={feedback.comments}
-        onChange={handleChange}
-        margin="normal"
-        multiline
-        rows={4}
+        control={control}
+        render={({ field }) => (
+          <TextField
+            {...field}
+            fullWidth
+            label="Comments"
+            margin="normal"
+            multiline
+            rows={4}
+          />
+        )}
       />
 
       <Button 
